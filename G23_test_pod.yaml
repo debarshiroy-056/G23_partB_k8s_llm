@@ -1,0 +1,10 @@
+# G23_test_pod.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nemesis-test-pod
+spec:
+  schedulerName: nemesis  # <-- THIS triggers your custom python script!
+  containers:
+  - name: test-container
+    image: nginx

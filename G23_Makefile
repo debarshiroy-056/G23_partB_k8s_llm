@@ -1,0 +1,71 @@
+# G23_Makefile
+IMAGE_NAME   = electra-sim:v1
+CLUSTER_NAME = llm-cluster
+NUM_TRIALS   = 5
+RESULTS_DIR  = results
+
+.PHONY: build run-affinity-trials run-antiaffinity-trials run-nemesis-trials run-all-trials plot clean clean-artifacts setup-results
+
+setup-results:
+	@mkdir -p $(RESULTS_DIR)
+
+build:
+	@echo "🔨 Building Docker image..."
+	docker build -f G23_Dockerfile -t $(IMAGE_NAME) .
+	@echo "📦 Loading image into kind cluster..."
+	kind load docker-image $(IMAGE_NAME) --name $(CLUSTER_NAME)
+	@echo "✅ Build and load complete!"
+
+run-affinity-trials: setup-results
+	@echo "🚀 Running $(NUM_TRIALS) Affinity trials..."
+	@for i in $$(seq 1 $(NUM_TRIALS)); do \
+		echo "── Trial $$i/$(NUM_TRIALS) (Affinity) ──"; \
+		kubectl apply -f G23_k8s_affinity.yaml; \
+		kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/electra-master --timeout=300s; \
+		kubectl logs electra-master | sed -n '/===CSV_START===/,/===CSV_END===/p' | grep -v '===CSV' > $(RESULTS_DIR)/G23_results_affinity_run$$i.csv; \
+		kubectl delete -f G23_k8s_affinity.yaml; \
+		sleep 2; \
+	done
+
+run-antiaffinity-trials: setup-results
+	@echo "🚀 Running $(NUM_TRIALS) Anti-Affinity trials..."
+	@for i in $$(seq 1 $(NUM_TRIALS)); do \
+		echo "── Trial $$i/$(NUM_TRIALS) (Anti-Affinity) ──"; \
+		kubectl apply -f G23_k8s_antiaffinity.yaml; \
+		kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/electra-master --timeout=300s; \
+		kubectl logs electra-master | sed -n '/===CSV_START===/,/===CSV_END===/p' | grep -v '===CSV' > $(RESULTS_DIR)/G23_results_antiaffinity_run$$i.csv; \
+		kubectl delete -f G23_k8s_antiaffinity.yaml; \
+		sleep 2; \
+	done
+
+run-nemesis-trials: setup-results
+	@echo "🧠 Running $(NUM_TRIALS) NEMESIS trials (Make sure custom scheduler is running in another terminal!)..."
+	@for i in $$(seq 1 $(NUM_TRIALS)); do \
+		echo "── Trial $$i/$(NUM_TRIALS) (NEMESIS) ──"; \
+		kubectl apply -f G23_k8s_nemesis.yaml; \
+		kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/electra-master --timeout=300s; \
+		kubectl logs electra-master | sed -n '/===CSV_START===/,/===CSV_END===/p' | grep -v '===CSV' > $(RESULTS_DIR)/G23_results_nemesis_run$$i.csv; \
+		kubectl delete -f G23_k8s_nemesis.yaml; \
+		sleep 2; \
+	done
+
+run-all-trials: run-affinity-trials run-antiaffinity-trials run-nemesis-trials
+	@echo "✅ All experiments complete!"
+
+plot:
+	@echo "📊 Aggregating data and generating hardcoded plot script..."
+	python G23_pipeline.py
+	python G23_final_plot.py
+	python G23_plot_perstep.py
+
+clean:
+	@echo "🧹 Force cleaning all project pods..."
+	-kubectl delete -f G23_k8s_affinity.yaml --ignore-not-found
+	-kubectl delete -f G23_k8s_antiaffinity.yaml --ignore-not-found
+	-kubectl delete -f G23_k8s_nemesis.yaml --ignore-not-found
+	@echo "🧹 Removing results directory..."
+	@rm -rf $(RESULTS_DIR)
+
+clean-artifacts:
+	@echo "🧹 Removing generated plot artifacts..."
+	rm -f G23_plot_bar.png G23_plot_perstep.png

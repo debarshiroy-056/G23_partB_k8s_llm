@@ -1,0 +1,12 @@
+# G23_chaos_cpu.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: noisy-neighbor
+spec:
+  nodeName: llm-cluster-worker  # Forcing it onto worker 1
+  containers:
+  - name: stress-container
+    image: polinux/stress
+    command: ["stress"]
+    args: ["--cpu", "4", "--timeout", "3600"] # Blasts 4 CPU cores for an hour

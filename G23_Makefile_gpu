@@ -1,0 +1,48 @@
+# G23_Makefile_gpu (Bare-Metal GPU Automation)
+NUM_TRIALS = 5
+RESULTS_DIR = results
+
+.PHONY: all setup run-clean run-noisy run-nemesis stop-chaos plot clean
+
+all: clean setup run-clean run-noisy run-nemesis stop-chaos plot
+
+setup:
+	@mkdir -p $(RESULTS_DIR)
+	@echo "😈 Starting Chaos on GPU 1 in the background..."
+	@python G23_chaos_gpu.py > /dev/null 2>&1 & echo $$! > chaos_gpu.pid
+	@sleep 3
+
+run-clean:
+	@echo "🚀 Running $(NUM_TRIALS) Baseline Trials (Forced on Clean GPU 0)..."
+	@for i in $$(seq 1 $(NUM_TRIALS)); do \
+		CUDA_VISIBLE_DEVICES=0 python G23_electra_train_gpu.py > /dev/null; \
+		mv G23_results_gpu.csv $(RESULTS_DIR)/G23_results_gpu_clean_run$$i.csv; \
+	done
+
+run-noisy:
+	@echo "🐌 Running $(NUM_TRIALS) Baseline Trials (Forced on Noisy GPU 1)..."
+	@for i in $$(seq 1 $(NUM_TRIALS)); do \
+		CUDA_VISIBLE_DEVICES=1 python G23_electra_train_gpu.py > /dev/null; \
+		mv G23_results_gpu.csv $(RESULTS_DIR)/G23_results_gpu_noisy_run$$i.csv; \
+	done
+
+run-nemesis:
+	@echo "🧠 Running $(NUM_TRIALS) NEMESIS Trials (Scheduler decides)..."
+	@for i in $$(seq 1 $(NUM_TRIALS)); do \
+		python G23_custom_scheduler_gpu.py > /dev/null; \
+		mv G23_results_gpu.csv $(RESULTS_DIR)/G23_results_gpu_nemesis_run$$i.csv; \
+	done
+
+stop-chaos:
+	@echo "🛑 Stopping Chaos..."
+	@if [ -f chaos_gpu.pid ]; then kill $$(cat chaos_gpu.pid) && rm chaos_gpu.pid; fi
+
+plot:
+	@echo "📊 Generating GPU Comparison Plots..."
+	@python G23_pipeline_gpu.py
+
+clean:
+	@echo "🧹 Cleaning up old GPU results..."
+	@if [ -f chaos_gpu.pid ]; then kill $$(cat chaos_gpu.pid) 2>/dev/null || true; rm chaos_gpu.pid; fi
+	@rm -rf $(RESULTS_DIR)
+	@rm -f G23_plot_bar_gpu.png G23_plot_perstep_gpu.png
