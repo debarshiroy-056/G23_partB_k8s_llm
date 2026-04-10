@@ -1,0 +1,109 @@
+# G23_k8s_gang.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: electra-master-svc
+spec:
+  clusterIP: None
+  selector:
+    role: master
+---
+# Pod 1: The Master (Rank 0)
+apiVersion: v1
+kind: Pod
+metadata:
+  name: electra-master
+  labels:
+    role: master
+spec:
+  schedulerName: gang-scheduler
+  restartPolicy: Never
+  containers:
+  - name: electra-container
+    image: electra-sim:v1
+    imagePullPolicy: IfNotPresent
+    command: ["python", "G23_electra_train.py"]
+    env:
+    - name: MASTER_ADDR
+      value: "electra-master-svc"
+    - name: MASTER_PORT
+      value: "29500"
+    - name: WORLD_SIZE
+      value: "4"
+    - name: RANK
+      value: "0"
+---
+# Pod 2: Worker 1 (Rank 1)
+apiVersion: v1
+kind: Pod
+metadata:
+  name: electra-worker-1
+  labels:
+    role: worker
+spec:
+  schedulerName: gang-scheduler
+  restartPolicy: Never
+  containers:
+  - name: electra-container
+    image: electra-sim:v1
+    imagePullPolicy: IfNotPresent
+    command: ["python", "G23_electra_train.py"]
+    env:
+    - name: MASTER_ADDR
+      value: "electra-master-svc"
+    - name: MASTER_PORT
+      value: "29500"
+    - name: WORLD_SIZE
+      value: "4"
+    - name: RANK
+      value: "1"
+---
+# Pod 3: Worker 2 (Rank 2)
+apiVersion: v1
+kind: Pod
+metadata:
+  name: electra-worker-2
+  labels:
+    role: worker
+spec:
+  schedulerName: gang-scheduler
+  restartPolicy: Never
+  containers:
+  - name: electra-container
+    image: electra-sim:v1
+    imagePullPolicy: IfNotPresent
+    command: ["python", "G23_electra_train.py"]
+    env:
+    - name: MASTER_ADDR
+      value: "electra-master-svc"
+    - name: MASTER_PORT
+      value: "29500"
+    - name: WORLD_SIZE
+      value: "4"
+    - name: RANK
+      value: "2"
+---
+# Pod 4: Worker 3 (Rank 3)
+apiVersion: v1
+kind: Pod
+metadata:
+  name: electra-worker-3
+  labels:
+    role: worker
+spec:
+  schedulerName: gang-scheduler
+  restartPolicy: Never
+  containers:
+  - name: electra-container
+    image: electra-sim:v1
+    imagePullPolicy: IfNotPresent
+    command: ["python", "G23_electra_train.py"]
+    env:
+    - name: MASTER_ADDR
+      value: "electra-master-svc"
+    - name: MASTER_PORT
+      value: "29500"
+    - name: WORLD_SIZE
+      value: "4"
+    - name: RANK
+      value: "3"

@@ -2,10 +2,11 @@
 
 This project benchmarks distributed ML training under different placement strategies and runtime constraints. It compares default placement with a custom multi-objective scheduler named NEMESIS.
 
-The work is organized into two phases:
+The work is organized into three phases:
 
 - Phase 1 (Kubernetes / CPU): distributed simulation on a local kind cluster with network and CPU-noise effects.
-- Phase 2 (Bare-Metal / GPU): host-level GPU placement on a multi-GPU machine using NVIDIA telemetry.
+- Phase 2 (Kubernetes / Topology-Aware): expanded multi-worker kind topology with gang scheduling and network bottleneck injection.
+- Phase 3 (Bare-Metal / GPU): host-level GPU placement on a multi-GPU machine using NVIDIA telemetry.
 
 ## What This Project Covers
 
@@ -30,7 +31,11 @@ Default weights in this phase:
 
 Interpretation: network latency is strongly prioritized.
 
-### Phase 2 (Bare-Metal / GPU)
+### Phase 2 (Kubernetes / Topology-Aware)
+
+Phase 2 extends the Kubernetes experiments with topology-aware constraints and gang scheduling on a larger worker topology.
+
+### Phase 3 (Bare-Metal / GPU)
 
 $$
 \text{Cost} = (\text{VRAM used GB} \times \alpha) + (\text{GPU utilization \%} \times \beta)
@@ -66,7 +71,15 @@ Interpretation: lower VRAM pressure is prioritized, then compute utilization.
 - `G23_pipeline.py`: aggregation pipeline for K8s trials.
 - `G23_final_plot.py`, `G23_plot_perstep.py`: K8s plot renderers.
 
-### Phase 2: Bare-Metal + GPU
+### Phase 2: Kubernetes + Topology-Aware Gang Scheduling
+
+- `G23_topology_config.yaml`: multi-worker kind topology for phase 2.
+- `G23_topology_injector.sh`: applies node labels/topology metadata.
+- `G23_gang_scheduler.py`: topology-aware gang scheduler.
+- `G23_k8s_gang.yaml`: gang scheduling trial manifest.
+- `G23_netem_apply.sh`, `G23_netem_clear.sh`, `G23_netem_status.sh`: optional network emulation helpers.
+
+### Phase 3: Bare-Metal + GPU
 
 - `G23_Makefile_gpu`: GPU trial orchestration and plotting targets.
 - `G23_electra_train_gpu.py`: GPU training simulation.
@@ -101,9 +114,9 @@ python3 -m pip install torch numpy matplotlib kubernetes streamlit pandas plotly
 ### 1. Create Cluster and Build Image
 
 ```bash
-kind create cluster --name llm-cluster --config G23_kind_config.yaml
+kind create cluster --name llm-cluster --config G23_topology_config.yaml
 kubectl get nodes -o wide
-make -f G23_Makefile build
+make -f G23_Makefile setup-cluster
 ```
 
 ### 2. Optional: Enable metrics-server
@@ -163,7 +176,39 @@ Outputs:
 - `G23_plot_bar.png`
 - `G23_plot_perstep.png`
 
-## Phase 2: Bare-Metal GPU Workflow
+## Phase 2: Topology-Aware Multi-Worker Workflow
+
+### 1. Setup Topology Cluster
+
+```bash
+make -f G23_Makefile setup-cluster
+kubectl get nodes -o wide
+```
+
+### 2. Run All Phase 2 K8s Trial Modes
+
+```bash
+make -f G23_Makefile run-affinity-trials
+make -f G23_Makefile run-antiaffinity-trials
+make -f G23_Makefile run-nemesis-trials
+make -f G23_Makefile run-gang-trials
+```
+
+### 3. Generate Plots
+
+```bash
+make -f G23_Makefile plot
+```
+
+### 4. One-Command Full Run
+
+```bash
+make -f G23_Makefile all
+```
+
+This target runs cluster setup, all K8s trial modes (including phase 2 gang scheduling), plotting, and artifact cleanup.
+
+## Phase 3: Bare-Metal GPU Workflow
 
 This phase runs directly on host GPUs and does not require Docker or Kubernetes.
 
@@ -217,7 +262,8 @@ streamlit run G23_visualizer.py
 ```bash
 make -f G23_Makefile clean
 make -f G23_Makefile clean-artifacts
-kind delete cluster --name llm-cluster
+make -f G23_Makefile clean-binaries
+make -f G23_Makefile clean-all
 ```
 
 ### Bare-Metal/GPU artifacts
@@ -231,8 +277,7 @@ make -f G23_Makefile_gpu clean
 ### Phase 1 quick run
 
 ```bash
-kind create cluster --name llm-cluster --config G23_kind_config.yaml
-make -f G23_Makefile build
+make -f G23_Makefile setup-cluster
 make -f G23_Makefile run-affinity-trials
 make -f G23_Makefile run-antiaffinity-trials
 # start scheduler separately: python G23_custom_scheduler.py
@@ -243,6 +288,15 @@ make -f G23_Makefile plot
 ```
 
 ### Phase 2 quick run
+
+```bash
+make -f G23_Makefile setup-cluster
+make -f G23_Makefile run-gang-trials
+make -f G23_Makefile plot
+make -f G23_Makefile clean
+```
+
+### Phase 3 quick run
 
 ```bash
 make -f G23_Makefile_gpu all

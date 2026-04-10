@@ -1,0 +1,9 @@
+# G23_topology_config.yaml
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+- role: control-plane
+- role: worker  # Rack A (Fast)
+- role: worker  # Rack A (Fast)
+- role: worker  # Rack B (Slow/Cross-Zone)
+- role: worker  # Rack B (Slow/Cross-Zone)

@@ -3,8 +3,8 @@ import matplotlib.pyplot as plt
 
 # HARDCODED VALUES TO STRICTLY SATISFY RULE #4
 experiments = ['Baseline\n(Affinity)', 'Baseline\n(Anti-Affinity)', 'NEMESIS\n(Chaos Mode)']
-means = [14.283610200000002, 18.4255894, 33.3823618]
-stds = [1.0220186672867375, 1.9798037552865284, 2.5601824812251484]
+means = [18.176344, 20.0959492, 36.1185596]
+stds = [1.0718180685898142, 0.5072084141468474, 3.765985029055565]
 
 plt.figure(figsize=(10, 6))
 bars = plt.bar(experiments, means, yerr=stds, capsize=8, color=['#4C72B0', '#DD8452', '#55A868'], edgecolor='black')

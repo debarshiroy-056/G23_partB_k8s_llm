@@ -1,22 +1,24 @@
-# G23_Makefile
+# G23_Makefile (Unified Phase 1 & 2 Master Automation)
 IMAGE_NAME   = electra-sim:v1
 CLUSTER_NAME = llm-cluster
 NUM_TRIALS   = 5
 RESULTS_DIR  = results
 
-.PHONY: build run-affinity-trials run-antiaffinity-trials run-nemesis-trials run-all-trials plot clean clean-artifacts setup-results
+.PHONY: all setup-cluster run-affinity-trials run-antiaffinity-trials run-nemesis-trials run-gang-trials plot clean clean-artifacts clean-binaries clean-all
 
-setup-results:
+all: clean setup-cluster run-affinity-trials run-antiaffinity-trials run-nemesis-trials run-gang-trials plot clean-artifacts
+
+setup-cluster:
 	@mkdir -p $(RESULTS_DIR)
-
-build:
-	@echo "🔨 Building Docker image..."
+	@echo "🔥 Destroying old cluster to ensure clean state..."
+	kind delete cluster --name $(CLUSTER_NAME) >/dev/null 2>&1 || true
+	@echo "🔨 Building 4-Node Topology Cluster..."
+	kind create cluster --name $(CLUSTER_NAME) --config G23_topology_config.yaml
 	docker build -f G23_Dockerfile -t $(IMAGE_NAME) .
-	@echo "📦 Loading image into kind cluster..."
 	kind load docker-image $(IMAGE_NAME) --name $(CLUSTER_NAME)
-	@echo "✅ Build and load complete!"
+	@./G23_topology_injector.sh
 
-run-affinity-trials: setup-results
+run-affinity-trials:
 	@echo "🚀 Running $(NUM_TRIALS) Affinity trials..."
 	@for i in $$(seq 1 $(NUM_TRIALS)); do \
 		echo "── Trial $$i/$(NUM_TRIALS) (Affinity) ──"; \
@@ -27,7 +29,7 @@ run-affinity-trials: setup-results
 		sleep 2; \
 	done
 
-run-antiaffinity-trials: setup-results
+run-antiaffinity-trials:
 	@echo "🚀 Running $(NUM_TRIALS) Anti-Affinity trials..."
 	@for i in $$(seq 1 $(NUM_TRIALS)); do \
 		echo "── Trial $$i/$(NUM_TRIALS) (Anti-Affinity) ──"; \
@@ -38,8 +40,10 @@ run-antiaffinity-trials: setup-results
 		sleep 2; \
 	done
 
-run-nemesis-trials: setup-results
-	@echo "🧠 Running $(NUM_TRIALS) NEMESIS trials (Make sure custom scheduler is running in another terminal!)..."
+run-nemesis-trials:
+	@echo "🧠 Running $(NUM_TRIALS) NEMESIS CPU chaos trials..."
+	@python G23_custom_scheduler.py > /dev/null 2>&1 & echo $$! > sched.pid
+	@kubectl apply -f G23_chaos_cpu.yaml
 	@for i in $$(seq 1 $(NUM_TRIALS)); do \
 		echo "── Trial $$i/$(NUM_TRIALS) (NEMESIS) ──"; \
 		kubectl apply -f G23_k8s_nemesis.yaml; \
@@ -48,24 +52,42 @@ run-nemesis-trials: setup-results
 		kubectl delete -f G23_k8s_nemesis.yaml; \
 		sleep 2; \
 	done
+	@kubectl delete -f G23_chaos_cpu.yaml
+	@kill $$(cat sched.pid) && rm sched.pid
 
-run-all-trials: run-affinity-trials run-antiaffinity-trials run-nemesis-trials
-	@echo "✅ All experiments complete!"
+run-gang-trials:
+	@echo "🕸️ Running $(NUM_TRIALS) Topology-Aware Gang Scheduling Trials..."
+	@python G23_gang_scheduler.py > /dev/null 2>&1 & echo $$! > gang.pid
+	@for i in $$(seq 1 $(NUM_TRIALS)); do \
+		echo "── Trial $$i/$(NUM_TRIALS) (Gang) ──"; \
+		kubectl apply -f G23_k8s_gang.yaml; \
+		kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/electra-master --timeout=300s; \
+		kubectl logs electra-master | sed -n '/===CSV_START===/,/===CSV_END===/p' | grep -v '===CSV' > $(RESULTS_DIR)/G23_results_gang_run$$i.csv; \
+		kubectl delete -f G23_k8s_gang.yaml; \
+		sleep 2; \
+	done
+	@kill $$(cat gang.pid) && rm gang.pid
 
 plot:
-	@echo "📊 Aggregating data and generating hardcoded plot script..."
+	@echo "📊 Aggregating data and generating plots..."
 	python G23_pipeline.py
-	python G23_final_plot.py
-	python G23_plot_perstep.py
 
 clean:
-	@echo "🧹 Force cleaning all project pods..."
-	-kubectl delete -f G23_k8s_affinity.yaml --ignore-not-found
-	-kubectl delete -f G23_k8s_antiaffinity.yaml --ignore-not-found
-	-kubectl delete -f G23_k8s_nemesis.yaml --ignore-not-found
-	@echo "🧹 Removing results directory..."
+	@echo "🧹 Cleaning up K8s resources and outputs..."
+	-kind delete cluster --name $(CLUSTER_NAME) >/dev/null 2>&1 || true
 	@rm -rf $(RESULTS_DIR)
+	@rm -f *.pid *.png
 
 clean-artifacts:
-	@echo "🧹 Removing generated plot artifacts..."
-	rm -f G23_plot_bar.png G23_plot_perstep.png
+	@echo "🧹 Cleaning generated artifacts..."
+	@rm -rf $(RESULTS_DIR)
+	@rm -f *.pid *.png
+
+clean-binaries:
+	@echo "🧹 Cleaning built images..."
+	-docker rmi $(IMAGE_NAME) >/dev/null 2>&1 || true
+
+clean-all:
+	@echo "🧹 Deep cleaning everything: cluster, outputs, and images..."
+	@$(MAKE) -f G23_Makefile clean
+	@$(MAKE) -f G23_Makefile clean-binaries
