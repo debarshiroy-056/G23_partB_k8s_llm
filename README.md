@@ -2,10 +2,11 @@
 
 This project benchmarks distributed ML training under different placement strategies and runtime constraints. It compares default placement with a custom multi-objective scheduler named NEMESIS.
 
-The work is organized into three phases:
+The work is organized into four phases:
 
-- Phase 1 (Kubernetes / CPU): distributed simulation on a local kind cluster with network and CPU-noise effects.
-- Phase 2 (Kubernetes / Topology-Aware): expanded multi-worker kind topology with gang scheduling and network bottleneck injection.
+- Phase 1A (Kubernetes / CPU Baselines + NEMESIS): distributed simulation on a local kind cluster with CPU-noise effects.
+- Phase 1B (Kubernetes / Network Latency Sweep): controlled latency injection sweep to compare affinity vs anti-affinity sensitivity.
+- Phase 2 (Kubernetes / Topology-Aware): expanded multi-worker kind topology with gang scheduling.
 - Phase 3 (Bare-Metal / GPU): host-level GPU placement on a multi-GPU machine using NVIDIA telemetry.
 
 ## What This Project Covers
@@ -13,6 +14,7 @@ The work is organized into three phases:
 1. Clean baseline: affinity on K8s nodes or execution on clean GPU.
 2. Noisy baseline: anti-affinity on K8s nodes or execution on noisy/fragmented GPU.
 3. NEMESIS under chaos: dynamic placement based on live telemetry.
+4. Latency sweep sensitivity: affinity vs anti-affinity scaling from 0-25ms injected delay.
 
 ## NEMESIS Scoring Model
 
@@ -71,13 +73,20 @@ Interpretation: lower VRAM pressure is prioritized, then compute utilization.
 - `G23_pipeline.py`: aggregation pipeline for K8s trials.
 - `G23_final_plot.py`, `G23_plot_perstep.py`: K8s plot renderers.
 
+### Phase 1B: Kubernetes + Latency Sweep
+
+- `G23_sweep_run.sh`: automated latency sweep runner over multiple delay values.
+- `G23_sweep_summary.py`: compiles cross-latency summary CSV.
+- `G23_sweep_plot.py`: latency vs total runtime line plot (with error bars).
+- `G23_phase_plot.py`: stacked forward/backward/optimizer breakdown across sweep conditions.
+- `G23_netem_apply.sh`, `G23_netem_clear.sh`, `G23_netem_status.sh`: netem helpers used by the sweep.
+
 ### Phase 2: Kubernetes + Topology-Aware Gang Scheduling
 
 - `G23_topology_config.yaml`: multi-worker kind topology for phase 2.
 - `G23_topology_injector.sh`: applies node labels/topology metadata.
 - `G23_gang_scheduler.py`: topology-aware gang scheduler.
 - `G23_k8s_gang.yaml`: gang scheduling trial manifest.
-- `G23_netem_apply.sh`, `G23_netem_clear.sh`, `G23_netem_status.sh`: optional network emulation helpers.
 
 ### Phase 3: Bare-Metal + GPU
 
@@ -109,7 +118,7 @@ python3 -m pip install --upgrade pip
 python3 -m pip install torch numpy matplotlib kubernetes streamlit pandas plotly nvidia-ml-py
 ```
 
-## Phase 1: Kubernetes CPU Workflow
+## Phase 1A: Kubernetes CPU Workflow
 
 ### 1. Create Cluster and Build Image
 
@@ -176,6 +185,46 @@ Outputs:
 - `G23_plot_bar.png`
 - `G23_plot_perstep.png`
 
+## Phase 1B: Network Latency Sweep Workflow
+
+This phase runs a parameter sweep over injected inter-node latency and captures per-trial CSVs for affinity and anti-affinity at each delay.
+
+### 1. Run Default Sweep
+
+```bash
+make -f G23_Makefile run-latency-sweep
+```
+
+Default sweep settings from `G23_sweep_run.sh`:
+
+- `LATENCIES="0 1 5 10 25"`
+- `NUM_TRIALS=5` per configuration (affinity + anti-affinity)
+
+### 2. Run Custom Sweep (Optional)
+
+```bash
+LATENCIES="0 5 15" NUM_TRIALS=3 ./G23_sweep_run.sh
+```
+
+### 3. Generate Sweep Plots and Summary
+
+```bash
+make -f G23_Makefile plot
+```
+
+If `results_0ms/` exists, this also runs:
+
+- `python G23_sweep_summary.py`
+- `python G23_sweep_plot.py`
+- `python G23_phase_plot.py`
+
+Phase 1B outputs:
+
+- `G23_sweep_summary.csv`
+- `G23_sweep_plot.png`
+- `G23_phase_plot.png`
+- `results_<latency>ms/` (for each swept latency)
+
 ## Phase 2: Topology-Aware Multi-Worker Workflow
 
 ### 1. Setup Topology Cluster
@@ -207,6 +256,7 @@ make -f G23_Makefile all
 ```
 
 This target runs cluster setup, all K8s trial modes (including phase 2 gang scheduling), plotting, and artifact cleanup.
+It includes both Phase 1A and Phase 1B before Phase 2 gang scheduling.
 
 ## Phase 3: Bare-Metal GPU Workflow
 
@@ -294,6 +344,14 @@ make -f G23_Makefile setup-cluster
 make -f G23_Makefile run-gang-trials
 make -f G23_Makefile plot
 make -f G23_Makefile clean
+```
+
+### Phase 1B quick run
+
+```bash
+make -f G23_Makefile setup-cluster
+make -f G23_Makefile run-latency-sweep
+make -f G23_Makefile plot
 ```
 
 ### Phase 3 quick run

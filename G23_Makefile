@@ -1,12 +1,14 @@
+cat << 'EOF' > G23_Makefile
 # G23_Makefile (Unified Phase 1 & 2 Master Automation)
 IMAGE_NAME   = electra-sim:v1
 CLUSTER_NAME = llm-cluster
 NUM_TRIALS   = 5
 RESULTS_DIR  = results
 
-.PHONY: all setup-cluster run-affinity-trials run-antiaffinity-trials run-nemesis-trials run-gang-trials plot clean clean-artifacts clean-binaries clean-all
+.PHONY: all setup-cluster run-affinity-trials run-antiaffinity-trials run-nemesis-trials run-latency-sweep run-gang-trials plot clean clean-artifacts clean-binaries clean-all
 
-all: clean setup-cluster run-affinity-trials run-antiaffinity-trials run-nemesis-trials run-gang-trials plot clean-artifacts
+# Note: The sweep takes time, so it's included in 'all'. You can also run it individually!
+all: clean setup-cluster run-affinity-trials run-antiaffinity-trials run-nemesis-trials run-latency-sweep run-gang-trials plot clean-artifacts
 
 setup-cluster:
 	@mkdir -p $(RESULTS_DIR)
@@ -16,6 +18,7 @@ setup-cluster:
 	kind create cluster --name $(CLUSTER_NAME) --config G23_topology_config.yaml
 	docker build -f G23_Dockerfile -t $(IMAGE_NAME) .
 	kind load docker-image $(IMAGE_NAME) --name $(CLUSTER_NAME)
+	@chmod +x G23_topology_injector.sh G23_netem_apply.sh G23_netem_clear.sh G23_netem_status.sh G23_sweep_run.sh
 	@./G23_topology_injector.sh
 
 run-affinity-trials:
@@ -55,6 +58,10 @@ run-nemesis-trials:
 	@kubectl delete -f G23_chaos_cpu.yaml
 	@kill $$(cat sched.pid) && rm sched.pid
 
+run-latency-sweep:
+	@echo "🌪️ Running Phase 1B: Network Latency Parameter Sweep..."
+	@./G23_sweep_run.sh
+
 run-gang-trials:
 	@echo "🕸️ Running $(NUM_TRIALS) Topology-Aware Gang Scheduling Trials..."
 	@python G23_gang_scheduler.py > /dev/null 2>&1 & echo $$! > gang.pid
@@ -69,19 +76,24 @@ run-gang-trials:
 	@kill $$(cat gang.pid) && rm gang.pid
 
 plot:
-	@echo "📊 Aggregating data and generating plots..."
-	python G23_pipeline.py
+	@echo "📊 Aggregating Phase 1/2 Data and Generating Plots..."
+	@python G23_pipeline.py
+	@if [ -d "results_0ms" ]; then \
+		echo "📊 Generating Latency Sweep Plots..."; \
+		python G23_sweep_summary.py; \
+		python G23_sweep_plot.py; \
+		python G23_phase_plot.py; \
+	fi
 
 clean:
 	@echo "🧹 Cleaning up K8s resources and outputs..."
 	-kind delete cluster --name $(CLUSTER_NAME) >/dev/null 2>&1 || true
-	@rm -rf $(RESULTS_DIR)
-	@rm -f *.pid *.png
+	@rm -rf $(RESULTS_DIR) results_*ms
+	@rm -f *.pid *.png *.csv
 
 clean-artifacts:
-	@echo "🧹 Cleaning generated artifacts..."
-	@rm -rf $(RESULTS_DIR)
-	@rm -f *.pid *.png
+	@echo "🧹 Cleaning background processes (Keeping plots intact)..."
+	@rm -f *.pid
 
 clean-binaries:
 	@echo "🧹 Cleaning built images..."
@@ -91,3 +103,4 @@ clean-all:
 	@echo "🧹 Deep cleaning everything: cluster, outputs, and images..."
 	@$(MAKE) -f G23_Makefile clean
 	@$(MAKE) -f G23_Makefile clean-binaries
+EOF
