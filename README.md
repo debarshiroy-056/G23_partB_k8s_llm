@@ -57,7 +57,7 @@ Interpretation: lower VRAM pressure is prioritized, then compute utilization.
 - `results/`: per-trial CSV outputs.
 - `G23_visualizer.py`: Streamlit-based interactive analysis.
 
-### Phase 1: Kubernetes + CPU
+### Phase 1A: Kubernetes + CPU
 
 - `G23_Dockerfile`: builds `electra-sim:v1`.
 - `G23_Makefile`: build, run, plot, and cleanup targets.
