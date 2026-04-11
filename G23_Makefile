@@ -1,4 +1,3 @@
-cat << 'EOF' > G23_Makefile
 # G23_Makefile (Unified Phase 1 & 2 Master Automation)
 IMAGE_NAME   = electra-sim:v1
 CLUSTER_NAME = llm-cluster
@@ -103,4 +102,3 @@ clean-all:
 	@echo "🧹 Deep cleaning everything: cluster, outputs, and images..."
 	@$(MAKE) -f G23_Makefile clean
 	@$(MAKE) -f G23_Makefile clean-binaries
-EOF
