@@ -20,6 +20,20 @@ import glob
 import numpy as np
 
 
+PHASE_COLUMN_CANDIDATES = {
+    "forward": ["forward_time_sec", "forward_sec"],
+    "backward": ["backward_time_sec", "backward_sec"],
+    "optimizer": ["optimizer_time_sec", "optimizer_sec"],
+}
+
+
+def _parse_float(value, default=0.0):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
 def read_trial_csv(filepath):
     """
     Returns dict with total_sec, forward_sum, backward_sum, optimizer_sum.
@@ -28,17 +42,41 @@ def read_trial_csv(filepath):
     fwd_total = 0.0
     bwd_total = 0.0
     opt_total = 0.0
+    step_total = 0.0
     last_cum  = 0.0
     row_count = 0
+    phase_columns_seen = False
 
     with open(filepath, "r") as f:
         reader = csv.DictReader(f)
         for row in reader:
             try:
-                last_cum  = float(row["cumulative_sec"])
-                fwd_total += float(row.get("forward_time_sec", 0) or 0)
-                bwd_total += float(row.get("backward_time_sec", 0) or 0)
-                opt_total += float(row.get("optimizer_time_sec", 0) or 0)
+                last_cum = float(row["cumulative_sec"])
+
+                fwd_val = 0.0
+                bwd_val = 0.0
+                opt_val = 0.0
+
+                for col in PHASE_COLUMN_CANDIDATES["forward"]:
+                    if col in row and row.get(col) not in (None, ""):
+                        fwd_val = _parse_float(row.get(col), 0.0)
+                        phase_columns_seen = True
+                        break
+                for col in PHASE_COLUMN_CANDIDATES["backward"]:
+                    if col in row and row.get(col) not in (None, ""):
+                        bwd_val = _parse_float(row.get(col), 0.0)
+                        phase_columns_seen = True
+                        break
+                for col in PHASE_COLUMN_CANDIDATES["optimizer"]:
+                    if col in row and row.get(col) not in (None, ""):
+                        opt_val = _parse_float(row.get(col), 0.0)
+                        phase_columns_seen = True
+                        break
+
+                fwd_total += fwd_val
+                bwd_total += bwd_val
+                opt_total += opt_val
+                step_total += _parse_float(row.get("step_time_sec"), 0.0)
                 row_count += 1
             except (ValueError, KeyError):
                 continue
@@ -46,11 +84,17 @@ def read_trial_csv(filepath):
     if row_count == 0:
         return None
 
+    # If per-phase fields are unavailable in this CSV schema, keep useful totals by
+    # treating step_time_sec as a single aggregate phase. This avoids zeroed plots.
+    if not phase_columns_seen and step_total > 0:
+        fwd_total = step_total
+
     return {
         "total_sec":     last_cum,
         "forward_sec":   fwd_total,
         "backward_sec":  bwd_total,
         "optimizer_sec": opt_total,
+        "phase_breakdown_available": phase_columns_seen,
     }
 
 
@@ -92,19 +136,29 @@ def aggregate(trials):
         "mean_forward_sec":  float(fwds.mean()),
         "mean_backward_sec": float(bwds.mean()),
         "mean_optimizer_sec": float(opts.mean()),
+        "phase_breakdown_available": any(t.get("phase_breakdown_available", False) for t in trials),
     }
 
 
 def main():
     folders = sorted(glob.glob("results_*ms")) + (["results"] if os.path.isdir("results") else [])
 
-    seen = set()
+    # De-duplicate by latency key (e.g., results_0ms and results both map to 0ms).
+    # Prefer explicit results_<N>ms folder over generic results/.
+    by_latency = {}
     entries = []
     for folder in folders:
         latency = extract_latency(folder)
-        if latency is None or folder in seen:
+        if latency is None:
             continue
-        seen.add(folder)
+        current = by_latency.get(latency)
+        is_explicit = folder != "results"
+        if current is None:
+            by_latency[latency] = folder
+        elif current == "results" and is_explicit:
+            by_latency[latency] = folder
+
+    for latency, folder in by_latency.items():
         entries.append((latency, folder))
     entries.sort()
 
@@ -140,6 +194,7 @@ def main():
             "mean_optimizer_sec": round(aff_stats["mean_optimizer_sec"], 4),
             "backward_pct":       round(bwd_pct(aff_stats), 2),
             "slowdown_vs_affinity_pct": 0.0,
+            "phase_breakdown_available": int(bool(aff_stats["phase_breakdown_available"])),
         })
         rows.append({
             "latency_ms": latency,
@@ -152,6 +207,7 @@ def main():
             "mean_optimizer_sec": round(anti_stats["mean_optimizer_sec"], 4),
             "backward_pct":       round(bwd_pct(anti_stats), 2),
             "slowdown_vs_affinity_pct": round(slowdown, 2),
+            "phase_breakdown_available": int(bool(anti_stats["phase_breakdown_available"])),
         })
 
     # Write master CSV
@@ -160,7 +216,7 @@ def main():
         "latency_ms", "config", "num_trials",
         "mean_total_sec", "std_total_sec",
         "mean_forward_sec", "mean_backward_sec", "mean_optimizer_sec",
-        "backward_pct", "slowdown_vs_affinity_pct",
+        "backward_pct", "slowdown_vs_affinity_pct", "phase_breakdown_available",
     ]
     with open(outpath, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
