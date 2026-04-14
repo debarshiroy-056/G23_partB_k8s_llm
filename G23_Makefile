@@ -4,7 +4,7 @@ CLUSTER_NAME = llm-cluster
 NUM_TRIALS   = 5
 RESULTS_DIR  = results
 
-.PHONY: all setup-cluster run-affinity-trials run-antiaffinity-trials run-nemesis-trials run-latency-sweep run-gang-trials plot clean clean-artifacts clean-binaries clean-all
+.PHONY: all setup-cluster run-affinity-trials run-antiaffinity-trials run-nemesis-trials run-latency-sweep run-gang-trials plot telemetry-plot clean clean-artifacts clean-binaries clean-all
 
 # Note: The sweep takes time, so it's included in 'all'. You can also run it individually!
 all: clean setup-cluster run-affinity-trials run-antiaffinity-trials run-nemesis-trials run-latency-sweep run-gang-trials plot clean-artifacts
@@ -83,6 +83,10 @@ plot:
 		python G23_sweep_plot.py; \
 		python G23_phase_plot.py; \
 	fi
+
+telemetry-plot:
+	@echo "📈 Generating monitor telemetry plots from CSV logs..."
+	@python G23_telemetry_plot.py
 
 clean:
 	@echo "🧹 Cleaning up K8s resources and outputs..."

@@ -1,4 +1,8 @@
 # G23_stress_monitor.py
+import argparse
+import csv
+import datetime as dt
+import os
 import time
 from kubernetes import client, config
 
@@ -26,20 +30,57 @@ def get_node_stress():
         print(f"Waiting for Metrics Server to initialize... ({e})")
         return None
 
+
+def _default_output_path():
+    ts = dt.datetime.now().strftime("%Y%m%d_%H%M%S")
+    return os.path.join("results", f"G23_stress_telemetry_{ts}.csv")
+
+
+def _ensure_parent_dir(path):
+    parent = os.path.dirname(path)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+
+
+def _append_rows(csv_path, elapsed_sec, stress_data):
+    file_exists = os.path.exists(csv_path)
+    with open(csv_path, "a", newline="") as f:
+        writer = csv.writer(f)
+        if not file_exists:
+            writer.writerow(["timestamp_iso", "elapsed_sec", "node", "cpu_millicores"])
+        timestamp = dt.datetime.now(dt.timezone.utc).isoformat()
+        for node, cpu in stress_data.items():
+            writer.writerow([timestamp, f"{elapsed_sec:.2f}", node, int(cpu)])
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Monitor node CPU usage and write telemetry CSV.")
+    parser.add_argument("--interval", type=float, default=5.0, help="Sampling interval in seconds (default: 5.0)")
+    parser.add_argument("--output", default=None, help="Output CSV path (default: results/G23_stress_telemetry_<timestamp>.csv)")
+    return parser.parse_args()
+
 if __name__ == "__main__":
+    args = parse_args()
+    output_path = args.output or _default_output_path()
+    _ensure_parent_dir(output_path)
+
     print("🚀 Starting NEMESIS CPU Interference Telemetry...")
     print("Note: Metrics Server takes about 60 seconds to gather its first data points.\n")
+    print(f"📁 Writing telemetry to: {output_path}")
+    start_time = time.time()
     
     try:
         while True:
             stress_data = get_node_stress()
             if stress_data:
+                elapsed = time.time() - start_time
+                _append_rows(output_path, elapsed, stress_data)
                 print("--- Real-Time Node CPU Usage (Millicores) ---")
                 for node, cpu in stress_data.items():
                     # Visual warning if CPU is heavily spiked (e.g., over 1000 millicores / 1 full core)
                     warning = " ⚠️ (HIGH STRESS)" if cpu > 1000 else ""
                     print(f"{node}: {cpu}m{warning}")
                 print("-" * 45)
-            time.sleep(5) # The metrics server updates every few seconds
+            time.sleep(args.interval)
     except KeyboardInterrupt:
         print("\n🛑 Stress Telemetry stopped.")

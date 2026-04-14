@@ -166,6 +166,18 @@ Terminal C (optional):
 python G23_stress_monitor.py
 ```
 
+Both monitor processes now write CSV telemetry logs automatically under `results/`:
+
+- `G23_network_telemetry_<timestamp>.csv`
+- `G23_stress_telemetry_<timestamp>.csv`
+
+Optional monitor flags:
+
+```bash
+python G23_network_monitor.py --interval 2 --output results/my_network.csv
+python G23_stress_monitor.py --interval 5 --output results/my_stress.csv
+```
+
 Main terminal:
 
 ```bash
@@ -184,6 +196,25 @@ Outputs:
 
 - `G23_plot_bar.png`
 - `G23_plot_perstep.png`
+
+### 6. Generate Telemetry Plots (Optional)
+
+After running `G23_network_monitor.py` and/or `G23_stress_monitor.py` during experiments:
+
+```bash
+make -f G23_Makefile telemetry-plot
+```
+
+This generates:
+
+- `G23_telemetry_network.png`
+- `G23_telemetry_stress.png`
+
+You can also point to specific CSV files:
+
+```bash
+python G23_telemetry_plot.py --network-csv results/G23_network_telemetry_YYYYMMDD_HHMMSS.csv --stress-csv results/G23_stress_telemetry_YYYYMMDD_HHMMSS.csv
+```
 
 ## Phase 1B: Network Latency Sweep Workflow
 

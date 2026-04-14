@@ -1,4 +1,8 @@
 # G23_network_monitor.py
+import argparse
+import csv
+import datetime as dt
+import os
 import subprocess
 import time
 from kubernetes import client, config
@@ -52,11 +56,51 @@ def generate_network_matrix():
         
     return network_matrix
 
+
+def _default_output_path():
+    ts = dt.datetime.now().strftime("%Y%m%d_%H%M%S")
+    return os.path.join("results", f"G23_network_telemetry_{ts}.csv")
+
+
+def _ensure_parent_dir(path):
+    parent = os.path.dirname(path)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+
+
+def _append_rows(csv_path, elapsed_sec, matrix):
+    file_exists = os.path.exists(csv_path)
+    with open(csv_path, "a", newline="") as f:
+        writer = csv.writer(f)
+        if not file_exists:
+            writer.writerow(["timestamp_iso", "elapsed_sec", "node", "latency_ms", "status"])
+        timestamp = dt.datetime.now(dt.timezone.utc).isoformat()
+        for node, latency in matrix.items():
+            if latency == float('inf'):
+                writer.writerow([timestamp, f"{elapsed_sec:.2f}", node, "", "unreachable"])
+            else:
+                writer.writerow([timestamp, f"{elapsed_sec:.2f}", node, f"{latency:.6f}", "ok"])
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Monitor node network latency and write telemetry CSV.")
+    parser.add_argument("--interval", type=float, default=2.0, help="Sampling interval in seconds (default: 2.0)")
+    parser.add_argument("--output", default=None, help="Output CSV path (default: results/G23_network_telemetry_<timestamp>.csv)")
+    return parser.parse_args()
+
 if __name__ == "__main__":
+    args = parse_args()
+    output_path = args.output or _default_output_path()
+    _ensure_parent_dir(output_path)
+
     print("🚀 Starting NEMESIS Network Telemetry Module...")
+    print(f"📁 Writing telemetry to: {output_path}")
+    start_time = time.time()
     try:
         while True:
             matrix = generate_network_matrix()
+            elapsed = time.time() - start_time
+            _append_rows(output_path, elapsed, matrix)
             print("\n--- Real-Time Network Matrix ---")
             for node, latency in matrix.items():
                 # If latency is infinity, it means the node is totally unreachable
@@ -64,6 +108,6 @@ if __name__ == "__main__":
                     print(f"{node}: Unreachable (Packet Loss)")
                 else:
                     print(f"{node}: {latency:.2f} ms")
-            time.sleep(2) # Update every 2 seconds
+            time.sleep(args.interval)
     except KeyboardInterrupt:
         print("\n🛑 Telemetry stopped.")
