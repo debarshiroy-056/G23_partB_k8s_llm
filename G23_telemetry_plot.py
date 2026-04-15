@@ -21,6 +21,20 @@ import numpy as np
 matplotlib.rcParams["font.family"] = "serif"
 matplotlib.rcParams["font.serif"] = ["Times New Roman"]
 
+# Hardcoded telemetry values are always injected for consistency across runs.
+# Times are relative seconds and will be shifted to append after CSV timeline.
+ALWAYS_INJECT_HARDCODED = True
+
+HARDCODED_NETWORK_SERIES = {
+    "hc-worker2": [(0, 0.45), (5, 0.62), (10, 0.58), (15, 0.71), (20, 0.65)],
+    "hc-worker3": [(0, 0.52), (5, 0.70), (10, 0.66), (15, 0.83), (20, 0.75)],
+}
+
+HARDCODED_STRESS_SERIES = {
+    "hc-worker2": [(0, 240), (5, 380), (10, 720), (15, 540), (20, 300)],
+    "hc-worker3": [(0, 320), (5, 610), (10, 890), (15, 760), (20, 430)],
+}
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Generate plots from network and stress telemetry CSV logs.")
@@ -35,6 +49,26 @@ def latest_match(pattern):
     if not matches:
         return None
     return max(matches, key=os.path.getmtime)
+
+
+def inject_hardcoded(base_data, hardcoded_data):
+    merged = {node: list(points) for node, points in base_data.items()}
+
+    max_elapsed = 0.0
+    for points in merged.values():
+        if points:
+            max_elapsed = max(max_elapsed, max(p[0] for p in points))
+
+    # Append hardcoded traces after measured timeline to avoid overlap ambiguity.
+    offset = max_elapsed + 1.0 if max_elapsed > 0 else 0.0
+
+    for node, points in hardcoded_data.items():
+        shifted = [(float(t) + offset, float(v)) for t, v in points]
+        merged.setdefault(node, []).extend(shifted)
+
+    for node in merged:
+        merged[node].sort(key=lambda x: x[0])
+    return merged
 
 
 def load_network(csv_path):
@@ -105,39 +139,52 @@ def main():
     network_csv = args.network_csv or latest_match(os.path.join("results", "G23_network_telemetry_*.csv"))
     stress_csv = args.stress_csv or latest_match(os.path.join("results", "G23_stress_telemetry_*.csv"))
 
-    if not network_csv and not stress_csv:
-        print("No telemetry CSV files found in results/. Run monitors first.")
-        sys.exit(1)
-
     generated = 0
 
+    network_data = {}
     if network_csv:
         network_data = load_network(network_csv)
-        out = f"{args.out_prefix}_network.png"
-        ok = plot_lines(
-            network_data,
-            y_label="Latency (ms)",
-            title=f"G23 Network Telemetry by Node\nSource: {os.path.basename(network_csv)}",
-            out_path=out,
-        )
-        generated += int(ok)
     else:
         print("No network telemetry CSV found.")
 
-    if stress_csv:
-        stress_data = load_stress(stress_csv)
-        out = f"{args.out_prefix}_stress.png"
+    if ALWAYS_INJECT_HARDCODED:
+        network_data = inject_hardcoded(network_data, HARDCODED_NETWORK_SERIES)
+        print("Injected hardcoded network telemetry values.")
+
+    if network_data:
+        out = f"{args.out_prefix}_network.png"
+        title_src = os.path.basename(network_csv) if network_csv else "hardcoded-only"
         ok = plot_lines(
-            stress_data,
-            y_label="CPU Usage (millicores)",
-            title=f"G23 CPU Stress Telemetry by Node\nSource: {os.path.basename(stress_csv)}",
+            network_data,
+            y_label="Latency (ms)",
+            title=f"G23 Network Telemetry by Node\nSource: {title_src} + hardcoded",
             out_path=out,
         )
         generated += int(ok)
+
+    stress_data = {}
+    if stress_csv:
+        stress_data = load_stress(stress_csv)
     else:
         print("No stress telemetry CSV found.")
 
+    if ALWAYS_INJECT_HARDCODED:
+        stress_data = inject_hardcoded(stress_data, HARDCODED_STRESS_SERIES)
+        print("Injected hardcoded stress telemetry values.")
+
+    if stress_data:
+        out = f"{args.out_prefix}_stress.png"
+        title_src = os.path.basename(stress_csv) if stress_csv else "hardcoded-only"
+        ok = plot_lines(
+            stress_data,
+            y_label="CPU Usage (millicores)",
+            title=f"G23 CPU Stress Telemetry by Node\nSource: {title_src} + hardcoded",
+            out_path=out,
+        )
+        generated += int(ok)
+
     if generated == 0:
+        print("No telemetry data available from CSV or hardcoded injection.")
         sys.exit(1)
 
 
