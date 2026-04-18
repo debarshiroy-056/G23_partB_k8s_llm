@@ -1,4 +1,24 @@
 # G23_electra_train_gpu.py
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OVERVIEW: Single-GPU ELECTRA Training Simulation
+# ─────────────────────────────────────────────────────────────────────────────
+# The bare-metal GPU training workload used in Phase 3. Intentionally oversized
+# to generate heavy compute and VRAM pressure, so the difference between a
+# clean GPU and a fragmented one is clearly measurable.
+#
+# How it works:
+#   1. Auto-detects whichever GPU was assigned via CUDA_VISIBLE_DEVICES (set
+#      either manually for baselines, or by G23_custom_scheduler_gpu.py).
+#   2. Builds a wide feed-forward network (4096 -> 8192 -> 8192 -> 4096) with
+#      a 512x4096 input batch to saturate GPU compute.
+#   3. Runs NUM_STEPS=50 iterations; after each step calls
+#      torch.cuda.synchronize() to get accurate wall-clock timing instead of
+#      the asynchronous dispatch time CUDA normally reports.
+#   4. Writes per-step metrics to G23_results_gpu.csv (the Makefile then
+#      renames this into results/G23_results_gpu_<config>_run<i>.csv).
+# ─────────────────────────────────────────────────────────────────────────────
+
 import os
 import csv
 import time

@@ -1,4 +1,25 @@
 # G23_network_monitor.py
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OVERVIEW: Live Network Telemetry Daemon
+# ─────────────────────────────────────────────────────────────────────────────
+# Standalone observability process that periodically pings every worker node
+# and logs latency to a timestamped CSV. Used to validate the emulation
+# environment (verifying that tc netem and the topology_injector actually
+# produced the expected latency bands).
+#
+# How it works:
+#   1. Queries the K8s API for every node's InternalIP on each tick.
+#   2. Issues a single ICMP ping per node and parses the 'time=' field.
+#   3. Unreachable nodes are marked 'unreachable' with empty latency so
+#      downstream plotting can distinguish packet loss from real values.
+#   4. Appends rows to results/G23_network_telemetry_<timestamp>.csv with
+#      columns: timestamp_iso, elapsed_sec, node, latency_ms, status.
+#
+# CLI flags: --interval (seconds between samples, default 2.0),
+#            --output   (custom CSV path).
+# ─────────────────────────────────────────────────────────────────────────────
+
 import argparse
 import csv
 import datetime as dt

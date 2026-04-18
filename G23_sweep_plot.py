@@ -1,13 +1,20 @@
 # G23_sweep_plot.py
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OVERVIEW: Phase 1B Latency Sweep Line Chart Renderer
+# ─────────────────────────────────────────────────────────────────────────────
+# Produces the headline Phase 1B figure: execution time vs injected network
+# latency (0 / 1 / 5 / 10 / 25 ms) for both affinity and anti-affinity
+# placement, with error bars showing ±1σ across 5 trials.
 #
-# Reads G23_sweep_summary.csv and generates a publication-quality line chart
-# showing how execution time scales with injected network latency, for both
-# affinity and anti-affinity configurations.
+# Key insight visualized: the affinity line stays flat (pods on same node,
+# no network traffic), while the anti-affinity line climbs sharply with
+# latency - mathematical proof that cross-node DDP placement is what
+# actually suffers from network degradation.
 #
-# Produces:
-#   - G23_sweep_plot.png : main line chart with error bars
-#
-# Usage: python G23_sweep_plot.py
+# Input : G23_sweep_summary.csv (produced by G23_sweep_summary.py)
+# Output: G23_sweep_plot.png (publication-quality, Times New Roman serif)
+# ─────────────────────────────────────────────────────────────────────────────
 
 import csv
 import sys

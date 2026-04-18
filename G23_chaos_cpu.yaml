@@ -1,4 +1,20 @@
 # G23_chaos_cpu.yaml
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OVERVIEW: CPU Noisy-Neighbor Injection Pod
+# ─────────────────────────────────────────────────────────────────────────────
+# A single pod pinned to `llm-cluster-worker` via explicit nodeName that
+# simulates a noisy tenant on that node. Uses the `polinux/stress` image to
+# saturate 4 CPU cores for 1 hour, starving any co-located ML workload.
+#
+# NEMESIS detects this via its CPU millicores telemetry and routes new DDP
+# pods to the clean worker, enabling us to measure chaos-avoidance gains
+# (48.12s baseline -> 41.12s with NEMESIS, ~15% improvement on top of
+# better execution stability).
+#
+# Applied via `kubectl apply` before NEMESIS trials, deleted afterward.
+# ─────────────────────────────────────────────────────────────────────────────
+
 apiVersion: v1
 kind: Pod
 metadata:

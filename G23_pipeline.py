@@ -1,4 +1,25 @@
 # G23_pipeline.py
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OVERVIEW: Phase 1 & 2 Results Aggregator and Plot Generator
+# ─────────────────────────────────────────────────────────────────────────────
+# Consumes per-trial CSVs from results/ and produces the two headline plots
+# for the Kubernetes experiments (affinity, anti-affinity, NEMESIS, gang).
+#
+# How it works:
+#   1. For each of the 4 configurations, globs matching result files
+#      (G23_results_<config>_run*.csv) from the results/ directory.
+#   2. get_totals(): reads the last 'cumulative_sec' value from each trial
+#      -> gives total execution time across runs.
+#   3. get_step_stats(): stacks all per-step timing arrays (5 trials x 50
+#      steps) and computes mean/std across runs per step.
+#   4. Generates G23_plot_bar.png (bar chart with error bars, total runtime
+#      per configuration) and G23_plot_perstep.png (line plot of mean per-
+#      step latency with ±1σ shading).
+#
+# Invoked via `make -f G23_Makefile plot` after all trials complete.
+# ─────────────────────────────────────────────────────────────────────────────
+
 import os
 import csv
 import glob

@@ -1,4 +1,18 @@
 # G23_k8s_antiaffinity.yaml
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OVERVIEW: Anti-Affinity Trial Manifest
+# ─────────────────────────────────────────────────────────────────────────────
+# Identical to the affinity manifest, but with podAntiAffinity forcing the
+# worker onto a DIFFERENT hostname than the master. This guarantees all DDP
+# gradient synchronization traffic crosses the network and gives us the
+# worst-case cross-node runtime for comparison.
+#
+# This is the workload used by the Phase 1B latency sweep's "red line"
+# measurements, where tc netem is layered on top to observe how cross-node
+# runtime degrades as injected latency grows.
+# ─────────────────────────────────────────────────────────────────────────────
+
 apiVersion: v1
 kind: Service
 metadata:

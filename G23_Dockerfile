@@ -1,3 +1,15 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# OVERVIEW: Container Image for the Distributed ELECTRA Workload
+# ─────────────────────────────────────────────────────────────────────────────
+# Builds the `electra-sim:v1` image that every K8s Phase 1 & 2 pod runs.
+# Intentionally minimal: Python 3.10 slim base + CPU-only PyTorch + our
+# training script. Kept small to speed up `kind load docker-image`.
+#
+# Note: no ENTRYPOINT is set because the training command is injected by
+# the Kubernetes manifest at pod launch time, along with RANK, WORLD_SIZE,
+# MASTER_ADDR and MASTER_PORT environment variables needed by torch.dist.
+# ─────────────────────────────────────────────────────────────────────────────
+
 # Use a lightweight Python image
 FROM python:3.10-slim
 

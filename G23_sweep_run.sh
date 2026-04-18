@@ -1,17 +1,27 @@
 #!/bin/bash
 # G23_sweep_run.sh
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OVERVIEW: Phase 1B Network Latency Parameter Sweep Orchestrator
+# ─────────────────────────────────────────────────────────────────────────────
+# Automates the complete latency sweep experiment across multiple delay
+# values. Produces the data that powers both G23_sweep_plot.py and
+# G23_phase_plot.py.
 #
-# Runs the complete latency sweep:
-#   For each latency value in LATENCIES:
-#     1. Apply tc netem delay to worker nodes
-#     2. Run NUM_TRIALS affinity + NUM_TRIALS anti-affinity experiments
-#     3. Save all CSVs to results_<delay>ms/
-#   Finally, clear tc rules and print a summary.
+# Workflow per latency value:
+#   1. Applies tc netem delay via G23_netem_apply.sh (or clears for 0ms).
+#   2. Runs NUM_TRIALS affinity trials + NUM_TRIALS anti-affinity trials.
+#   3. Extracts per-trial CSVs from pod logs using ===CSV_START/END===.
+#   4. Stores all output in results_<delay>ms/.
 #
-# Usage: ./G23_sweep_run.sh
+# At the end, clears all tc rules and reports total elapsed time.
 #
-# Override latencies: LATENCIES="0 5 10" ./G23_sweep_run.sh
-# Override trial count: NUM_TRIALS=3 ./G23_sweep_run.sh
+# Overridable via env vars:
+#   LATENCIES  - space-separated delay list (default: "0 1 5 10 25")
+#   NUM_TRIALS - trials per config per latency (default: 5)
+#
+# Example: LATENCIES="0 5 15" NUM_TRIALS=3 ./G23_sweep_run.sh
+# ─────────────────────────────────────────────────────────────────────────────
 
 set -e
 

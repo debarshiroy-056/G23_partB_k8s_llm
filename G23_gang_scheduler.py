@@ -1,4 +1,26 @@
 # G23_gang_scheduler.py
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OVERVIEW: Topology-Aware Gang Scheduler
+# ─────────────────────────────────────────────────────────────────────────────
+# A specialized scheduler that protects the DDP All-Reduce ring by ensuring
+# ALL N workers of a distributed job land on the same low-latency rack ("gang"
+# scheduling), preventing cross-zone bottlenecks.
+#
+# How it works:
+#   1. Watches the cluster for pods tagged `schedulerName: gang-scheduler`.
+#   2. Accumulates all 4 pending workers before making any placement decision
+#      (the "gang" property -> schedule all together or none at all).
+#   3. Maps the network: pings every worker node to build a latency map.
+#   4. Sorts nodes by latency and picks the 2 fastest as the "Fast Rack".
+#   5. Bin-packs the 4 pods onto these 2 fast nodes (2 pods per node) via
+#      V1Binding, trading CPU contention for network locality.
+#
+# Note: This exposes the Phase 2 trade-off documented in our report -
+# aggressive bin-packing avoids the 50ms cross-zone penalty but can cause
+# severe CPU fighting when heavy ML workers are double-stacked.
+# ─────────────────────────────────────────────────────────────────────────────
+
 import time
 import subprocess
 from kubernetes import client, config, watch

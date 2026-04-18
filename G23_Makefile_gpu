@@ -1,4 +1,24 @@
 # G23_Makefile_gpu (Bare-Metal GPU Automation)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OVERVIEW: Phase 3 Bare-Metal GPU Automation
+# ─────────────────────────────────────────────────────────────────────────────
+# Host-level automation (no Docker, no Kubernetes) for GPU experiments.
+#
+# Targets:
+#   setup       - Starts G23_chaos_gpu.py in the background to pollute GPU 1,
+#                 records its PID so it can be killed later.
+#   run-clean   - 5 baseline trials pinned to the clean GPU 0.
+#   run-noisy   - 5 baseline trials pinned to the fragmented GPU 1.
+#   run-nemesis - 5 trials letting NEMESIS auto-route to the best GPU.
+#   stop-chaos  - Terminates the background chaos process cleanly.
+#   plot        - Runs G23_pipeline_gpu.py to render result graphs.
+#   clean       - Kills chaos + removes results/ + plots.
+#
+# The `all` target runs the full sequence: clean setup -> baselines ->
+# NEMESIS -> stop chaos -> plot.
+# ─────────────────────────────────────────────────────────────────────────────
+
 NUM_TRIALS = 5
 RESULTS_DIR = results
 

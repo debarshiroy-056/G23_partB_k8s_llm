@@ -1,9 +1,22 @@
 #!/bin/bash
 # G23_netem_apply.sh
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OVERVIEW: Network Latency Injection Helper (Phase 1B)
+# ─────────────────────────────────────────────────────────────────────────────
+# Uses Linux Traffic Control (tc netem) to add a precise, deterministic
+# packet delay to both Phase 1 worker containers. Runs inside each Kind
+# node's container via `docker exec`.
 #
-# Applies artificial network latency to both Kind worker nodes using tc netem.
-# Usage: ./G23_netem_apply.sh <delay_ms>
-# Example: ./G23_netem_apply.sh 10
+# Usage:   ./G23_netem_apply.sh <delay_ms>
+# Example: ./G23_netem_apply.sh 10           # adds 10ms delay
+#
+# For every worker it:
+#   1. Deletes any existing root qdisc to prevent rule stacking.
+#   2. Adds a fresh `netem delay <X>ms` rule on eth0.
+#
+# Used in a loop by G23_sweep_run.sh to step through 0/1/5/10/25ms delays.
+# ─────────────────────────────────────────────────────────────────────────────
 
 set -e
 

@@ -1,4 +1,23 @@
 #!/bin/bash
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OVERVIEW: Phase 2 Multi-Rack Latency Injector
+# ─────────────────────────────────────────────────────────────────────────────
+# Logically splits the 4-worker cluster into two racks by injecting a 50ms
+# one-way latency on workers 3 and 4 (Rack B - Slow), leaving workers 1
+# and 2 (Rack A - Fast) untouched.
+#
+# How it works:
+#   1. Loops over llm-cluster-worker3 and llm-cluster-worker4.
+#   2. Installs iproute2 inside each container (kind images are minimal).
+#   3. Runs `tc qdisc add dev eth0 root netem delay 50ms`, emulating a
+#      cross-zone data-center link.
+#
+# Invoked automatically by the Makefile's setup-cluster target right after
+# the cluster is created, so Phase 2 trials always start with the rack
+# split in place.
+# ─────────────────────────────────────────────────────────────────────────────
+
 echo "🌐 Splitting cluster into Rack A (Fast) and Rack B (Slow)..."
 
 # Target worker3 and worker4 to represent the slow 'Rack B'

@@ -1,4 +1,23 @@
 # G23_custom_scheduler.py
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OVERVIEW: NEMESIS Multi-Objective Scheduler
+# ─────────────────────────────────────────────────────────────────────────────
+# This is the "brain" of NEMESIS for the Kubernetes CPU phase. It runs as a
+# background process that watches the cluster for Pending pods tagged with
+# `schedulerName: nemesis` and dynamically binds them to the best worker node.
+#
+# How it works:
+#   1. Watches the K8s API stream for Pending pods requesting our scheduler.
+#   2. For every candidate worker, queries two live telemetry sources:
+#        - MODULE A (Network): ICMP pings each node's InternalIP for latency.
+#        - MODULE B (Stress):  Queries the K8s Metrics API for CPU millicores.
+#   3. Computes a penalty: Cost = (CPU * alpha) + (Latency * beta)
+#      with alpha=1, beta=10 (network delays hurt DDP far more than CPU noise).
+#   4. Binds the pod to the lowest-cost node via the V1Binding API, completely
+#      bypassing the default Kubernetes scheduler.
+# ─────────────────────────────────────────────────────────────────────────────
+
 import time
 import subprocess
 from kubernetes import client, config, watch

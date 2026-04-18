@@ -1,4 +1,17 @@
 # G23_topology_config.yaml
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OVERVIEW: 4-Worker Multi-Rack Kind Cluster
+# ─────────────────────────────────────────────────────────────────────────────
+# Expanded topology for Phase 2 that simulates a real data-center with two
+# logical racks:
+#   - Worker 1 + Worker 2 : Rack A (Fast)                    - baseline network
+#   - Worker 3 + Worker 4 : Rack B (Slow / Cross-Zone)       - 50ms injected
+#
+# The 50ms delay is applied to workers 3 and 4 post-creation by
+# G23_topology_injector.sh using `tc qdisc add ... netem delay 50ms`.
+# ─────────────────────────────────────────────────────────────────────────────
+
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 nodes:

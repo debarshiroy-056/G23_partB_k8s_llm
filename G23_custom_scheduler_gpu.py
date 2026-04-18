@@ -1,4 +1,23 @@
 # G23_custom_scheduler_gpu.py
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OVERVIEW: NEMESIS Bare-Metal GPU Scheduler
+# ─────────────────────────────────────────────────────────────────────────────
+# Host-level GPU selector that bypasses Kubernetes entirely and talks directly
+# to the NVIDIA driver via NVML telemetry to pick the least-fragmented GPU.
+#
+# How it works:
+#   1. Initializes pynvml and iterates over every physical GPU on the host.
+#   2. For each GPU, pulls raw hardware metrics:
+#        - VRAM used (GB)   via nvmlDeviceGetMemoryInfo
+#        - Compute util (%) via nvmlDeviceGetUtilizationRates
+#   3. Computes a penalty: Cost = (VRAM_GB * alpha) + (GPU_util * beta)
+#      with alpha=1.0, beta=0.5 -> VRAM pressure weighted higher than compute
+#      because OOM crashes are catastrophic for LLMs.
+#   4. Isolates the training job to the winning GPU by setting
+#      CUDA_VISIBLE_DEVICES and launching G23_electra_train_gpu.py.
+# ─────────────────────────────────────────────────────────────────────────────
+
 import pynvml
 import subprocess
 import os

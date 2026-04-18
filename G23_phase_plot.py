@@ -1,13 +1,23 @@
 # G23_phase_plot.py
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OVERVIEW: DDP Phase Breakdown Stacked Bar Chart
+# ─────────────────────────────────────────────────────────────────────────────
+# The "smoking gun" visualization that proves the DDP backward pass - not
+# the forward or optimizer - absorbs 100% of the network latency penalty.
 #
-# Reads G23_sweep_summary.csv and generates a stacked bar chart showing
-# how each training step decomposes into Forward / Backward / Optimizer
-# time across latency conditions and pod placement strategies.
+# How it works:
+#   1. Reads G23_sweep_summary.csv produced by G23_sweep_summary.py.
+#   2. For each (latency, config) pair, stacks three bars:
+#        - Forward       (green)  - local compute, unaffected by network
+#        - Backward      (red)    - contains DDP AllReduce, grows with latency
+#        - Optimizer     (amber)  - local compute, unaffected by network
+#   3. Gracefully degrades: if the source CSV lacks per-phase columns,
+#      falls back to showing total step time with an explanatory annotation.
+#   4. Groups bars by latency value with dotted separators.
 #
-# Produces:
-#   G23_phase_plot.png
-#
-# Usage: python G23_phase_plot.py
+# Output: G23_phase_plot.png
+# ─────────────────────────────────────────────────────────────────────────────
 
 import csv
 import sys

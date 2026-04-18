@@ -1,4 +1,27 @@
 # G23_visualizer.py
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OVERVIEW: Interactive NEMESIS Cost Algorithm Visualizer (Streamlit App)
+# ─────────────────────────────────────────────────────────────────────────────
+# A hands-on educational UI that lets reviewers and teammates tune the
+# NEMESIS cost-penalty function and immediately see how the scheduling
+# decision changes. Makes the abstract formula tangible.
+#
+# How it works:
+#   1. Exposes alpha (CPU weight) and beta (latency weight) as sliders.
+#   2. Exposes two simulated nodes with editable CPU and latency values:
+#        - Node 1 represents a "Noisy Neighbor" (high CPU, low latency).
+#        - Node 2 represents "Network Lag"      (low CPU, high latency).
+#   3. Live-computes Cost = (CPU * alpha) + (Latency * beta) for both and
+#      flags the winner (lowest cost).
+#   4. Renders two interactive Plotly charts:
+#        - A bar chart of current penalty costs for both nodes.
+#        - A sensitivity line graph sweeping beta from 1 to 25, showing how
+#          the winning node flips as the latency weight is varied.
+#
+# Launch: `streamlit run G23_visualizer.py`
+# ─────────────────────────────────────────────────────────────────────────────
+
 import streamlit as st
 import pandas as pd
 import plotly.express as px

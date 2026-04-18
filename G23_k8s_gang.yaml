@@ -1,4 +1,20 @@
 # G23_k8s_gang.yaml
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OVERVIEW: Phase 2 Gang Scheduling Manifest (4 Workers)
+# ─────────────────────────────────────────────────────────────────────────────
+# Deploys a 4-pod DDP ELECTRA workload (WORLD_SIZE=4, ranks 0-3) where every
+# pod uses `schedulerName: gang-scheduler`. All 4 pods remain Pending until
+# G23_gang_scheduler.py sees the complete gang and co-schedules them onto
+# the detected fast rack.
+#
+# This is the manifest that produces the 82.11s ± 34.32s result documented
+# in the report - demonstrating how aggressive topology packing can trade
+# network locality for CPU contention.
+#
+# Prerequisite: G23_gang_scheduler.py MUST be running before applying this.
+# ─────────────────────────────────────────────────────────────────────────────
+
 apiVersion: v1
 kind: Service
 metadata:

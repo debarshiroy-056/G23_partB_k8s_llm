@@ -1,4 +1,26 @@
 # G23_electra_train.py
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OVERVIEW: Distributed ELECTRA Training Simulation (CPU / DDP Workload)
+# ─────────────────────────────────────────────────────────────────────────────
+# The containerized PyTorch DDP workload that every Phase 1 & 2 experiment
+# runs. Simulates the ELECTRA dual-network architecture (Generator +
+# Discriminator) with heavy linear layers to generate realistic gradient
+# synchronization traffic.
+#
+# How it works:
+#   1. Initializes a distributed process group using the 'gloo' backend
+#      (CPU-friendly equivalent to NCCL).
+#   2. Builds two dummy networks (Generator: 1024 -> 4096 -> 1024,
+#      Discriminator: 1024 -> 4096 -> 1), wraps both in DDP so the backward
+#      pass triggers ring AllReduce across pods.
+#   3. Runs NUM_STEPS=50 training iterations with per-step timing.
+#   4. Only rank 0 records metrics (step time, cumulative time, loss) and
+#      writes them to a CSV. Also dumps the CSV between ===CSV_START===/
+#      ===CSV_END=== markers on stdout so the Makefile can extract results
+#      via `kubectl logs` (kubectl cp does not work on completed pods).
+# ─────────────────────────────────────────────────────────────────────────────
+
 import os
 import csv
 import time

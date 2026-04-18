@@ -1,4 +1,25 @@
 # G23_stress_monitor.py
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OVERVIEW: Live CPU Stress Telemetry Daemon
+# ─────────────────────────────────────────────────────────────────────────────
+# Companion daemon to G23_network_monitor.py that tracks CPU contention on
+# every node by polling the Kubernetes metrics-server. Used to visually
+# confirm that the noisy-neighbor chaos pod is actually starving its target.
+#
+# How it works:
+#   1. On each tick, calls the metrics.k8s.io/v1beta1/nodes custom object API.
+#   2. Converts CPU usage from nanocores (K8s default) to millicores by
+#      stripping the trailing 'n' and dividing by 1,000,000 (1m = 1/1000 core).
+#   3. Prints a high-stress warning if any node exceeds 1000 millicores
+#      (equivalent to 1 full CPU core saturated).
+#   4. Appends rows to results/G23_stress_telemetry_<timestamp>.csv with
+#      columns: timestamp_iso, elapsed_sec, node, cpu_millicores.
+#
+# CLI flags: --interval (seconds, default 5.0), --output (CSV path).
+# Requires metrics-server to be installed on the cluster.
+# ─────────────────────────────────────────────────────────────────────────────
+
 import argparse
 import csv
 import datetime as dt

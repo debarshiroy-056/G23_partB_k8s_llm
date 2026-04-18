@@ -1,4 +1,19 @@
 # G23_k8s_affinity.yaml
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OVERVIEW: Affinity Trial Manifest
+# ─────────────────────────────────────────────────────────────────────────────
+# Deploys a 2-pod DDP ELECTRA workload with podAffinity forcing the worker
+# onto the SAME hostname as the master. This eliminates network traffic and
+# establishes the best-case-scenario baseline for total execution time.
+#
+# Components:
+#   - electra-master-svc : headless service for RANK 0 discovery.
+#   - electra-master     : pod RANK 0, WORLD_SIZE 2.
+#   - electra-worker     : pod RANK 1, WORLD_SIZE 2,
+#                          with podAffinity -> same hostname as master.
+# ─────────────────────────────────────────────────────────────────────────────
+
 apiVersion: v1
 kind: Service
 metadata:

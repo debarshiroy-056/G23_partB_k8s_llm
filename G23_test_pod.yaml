@@ -1,4 +1,18 @@
 # G23_test_pod.yaml
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OVERVIEW: NEMESIS Scheduler Smoke Test Pod
+# ─────────────────────────────────────────────────────────────────────────────
+# Minimal sanity-check pod used to verify that the NEMESIS custom scheduler
+# is intercepting and binding Pending pods correctly. Runs a trivial nginx
+# container so the pod terminates quickly.
+#
+# Usage (from the README):
+#   python G23_custom_scheduler.py   # in one terminal
+#   kubectl apply -f G23_test_pod.yaml
+#   # expect to see interception + binding logs from NEMESIS
+# ─────────────────────────────────────────────────────────────────────────────
+
 apiVersion: v1
 kind: Pod
 metadata:

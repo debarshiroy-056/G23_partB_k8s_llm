@@ -1,8 +1,16 @@
 #!/bin/bash
 # G23_netem_clear.sh
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OVERVIEW: Network Latency Cleanup Helper (Phase 1B)
+# ─────────────────────────────────────────────────────────────────────────────
+# Removes all tc netem rules from the Phase 1 worker containers, restoring
+# default (near-zero) networking. Invoked:
+#   1. Before each 0ms baseline sweep step in G23_sweep_run.sh.
+#   2. At the end of the entire sweep to leave the cluster in a clean state.
 #
-# Removes all tc netem rules from both Kind worker nodes, restoring normal networking.
-# Usage: ./G23_netem_clear.sh
+# Silently tolerates "no rules to clear" so it is safe to call repeatedly.
+# ─────────────────────────────────────────────────────────────────────────────
 
 set -e
 

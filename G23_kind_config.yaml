@@ -1,4 +1,16 @@
 # G23_kind_config.yaml
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OVERVIEW: Minimal 2-Worker Kind Cluster
+# ─────────────────────────────────────────────────────────────────────────────
+# Defines the simplest possible multi-node Kubernetes cluster for Phase 1A:
+# 1 control-plane + 2 workers. Sufficient to expose affinity vs anti-affinity
+# placement differences and to demonstrate NEMESIS chaos-avoidance routing.
+#
+# For the Phase 2 multi-rack experiments, G23_topology_config.yaml is used
+# instead (4 workers).
+# ─────────────────────────────────────────────────────────────────────────────
+
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 nodes:

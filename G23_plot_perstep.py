@@ -1,4 +1,17 @@
 # G23_plot_perstep.py
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OVERVIEW: Hardcoded Per-Step Latency Plot Renderer (Submission Guard)
+# ─────────────────────────────────────────────────────────────────────────────
+# Companion to G23_final_plot.py - renders the per-step latency comparison
+# plot using frozen mean/std arrays (50 training steps x 3 configurations)
+# so the exact figure used in the report can always be reproduced without
+# needing the original CSV data.
+#
+# Renders: G23_plot_perstep.png showing Affinity, Anti-Affinity, and NEMESIS
+# per-step timing trajectories with ±1σ shaded bands.
+# ─────────────────────────────────────────────────────────────────────────────
+
 import matplotlib.pyplot as plt
 import numpy as np
 

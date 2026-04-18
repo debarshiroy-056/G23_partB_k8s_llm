@@ -1,4 +1,19 @@
 # G23_k8s_nemesis.yaml
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OVERVIEW: NEMESIS Trial Manifest
+# ─────────────────────────────────────────────────────────────────────────────
+# Deploys the same 2-pod DDP workload but with `schedulerName: nemesis` on
+# both pods. This flag instructs the Kubernetes API to skip the default
+# scheduler entirely and wait for our Python controller
+# (G23_custom_scheduler.py) to bind the pods via its telemetry-driven
+# cost-penalty logic.
+#
+# Prerequisite: G23_custom_scheduler.py MUST be running in a separate
+# terminal (or as a background process) or the pods will stay Pending
+# forever.
+# ─────────────────────────────────────────────────────────────────────────────
+
 apiVersion: v1
 kind: Service
 metadata:

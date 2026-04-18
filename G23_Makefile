@@ -1,4 +1,29 @@
 # G23_Makefile (Unified Phase 1 & 2 Master Automation)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OVERVIEW: Phase 1 & 2 Master Automation (Kubernetes / CPU)
+# ─────────────────────────────────────────────────────────────────────────────
+# Unified automation for all Kubernetes-based experiments. Runs the full
+# evaluation suite end-to-end with a single `make all` invocation.
+#
+# Targets:
+#   setup-cluster           - Creates a 4-node kind cluster, builds the
+#                             electra-sim:v1 image, loads it, and injects
+#                             the 50ms Rack B latency via topology_injector.
+#   run-affinity-trials     - Phase 1A baseline (pods co-located, fast).
+#   run-antiaffinity-trials - Phase 1A stressor (pods split, slow).
+#   run-nemesis-trials      - Phase 1A NEMESIS under CPU chaos.
+#                             Starts the custom scheduler in background,
+#                             injects noisy-neighbor, runs 5 trials.
+#   run-latency-sweep       - Phase 1B parameter sweep via G23_sweep_run.sh.
+#   run-gang-trials         - Phase 2 topology-aware gang scheduling.
+#   plot                    - Runs pipeline.py and sweep/phase plots.
+#   clean / clean-artifacts / clean-binaries / clean-all - teardown targets.
+#
+# Each trial runs the pod, waits for Succeeded, extracts CSV from logs via
+# ===CSV_START===/===CSV_END=== markers, deletes the pod, and repeats.
+# ─────────────────────────────────────────────────────────────────────────────
+
 IMAGE_NAME   = electra-sim:v1
 CLUSTER_NAME = llm-cluster
 NUM_TRIALS   = 5

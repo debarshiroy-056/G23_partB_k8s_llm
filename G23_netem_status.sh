@@ -1,8 +1,15 @@
 #!/bin/bash
 # G23_netem_status.sh
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OVERVIEW: Network Latency Inspection Helper
+# ─────────────────────────────────────────────────────────────────────────────
+# Diagnostic utility that prints the current tc qdisc configuration on
+# every Phase 1 worker container so you can verify netem rules were applied
+# and/or cleared correctly. Does not modify any state.
 #
-# Shows the current tc qdisc configuration on both Kind worker nodes.
 # Usage: ./G23_netem_status.sh
+# ─────────────────────────────────────────────────────────────────────────────
 
 INTERFACE="eth0"
 WORKERS=("llm-cluster-worker" "llm-cluster-worker2")

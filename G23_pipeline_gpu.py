@@ -1,3 +1,23 @@
+# G23_pipeline_gpu.py
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OVERVIEW: Phase 3 GPU Results Aggregator and Plot Generator
+# ─────────────────────────────────────────────────────────────────────────────
+# GPU counterpart to G23_pipeline.py. Aggregates bare-metal trial CSVs and
+# renders the Phase 3 headline plots comparing Clean GPU, Noisy GPU, and the
+# NEMESIS auto-routed outcome.
+#
+# How it works:
+#   1. Globs results/G23_results_gpu_<config>_run*.csv for each of three
+#      configs: clean, noisy, nemesis.
+#   2. Aggregates total runtime (mean ± std) and per-step latency arrays.
+#   3. Produces:
+#        - G23_plot_bar_gpu.png     (overall runtime bar chart)
+#        - G23_plot_perstep_gpu.png (per-step latency line plot)
+#
+# Invoked via `make -f G23_Makefile_gpu plot`.
+# ─────────────────────────────────────────────────────────────────────────────
+
 import os
 import csv
 import glob

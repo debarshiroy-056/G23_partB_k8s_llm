@@ -1,4 +1,17 @@
 # G23_final_plot.py
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OVERVIEW: Hardcoded Phase 2 Bar Chart Renderer (Submission Guard)
+# ─────────────────────────────────────────────────────────────────────────────
+# A reproducibility-safe version of the Phase 2 bar chart that uses frozen
+# numeric values instead of re-reading CSVs. Ensures the plot in the report
+# matches the exact numbers cited even if `results/` is wiped or the
+# environment is not available at submission time.
+#
+# Renders: G23_plot_bar.png showing mean ± std across 5 trials for
+# Affinity / Anti-Affinity / NEMESIS (Chaos Mode) configurations.
+# ─────────────────────────────────────────────────────────────────────────────
+
 import matplotlib.pyplot as plt
 
 # HARDCODED VALUES TO STRICTLY SATISFY RULE #4

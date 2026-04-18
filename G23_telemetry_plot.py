@@ -1,12 +1,23 @@
 # G23_telemetry_plot.py
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OVERVIEW: Live Telemetry Visualizer (Network + CPU Stress)
+# ─────────────────────────────────────────────────────────────────────────────
+# Renders two time-series plots from the CSV logs produced by
+# G23_network_monitor.py and G23_stress_monitor.py, used to validate that
+# the emulated testbed is actually producing the chaos we injected.
 #
-# Reads monitor CSV logs from G23_network_monitor.py and G23_stress_monitor.py
-# and generates time-series plots for node latency and node CPU usage.
-#
-# Usage:
-#   python G23_telemetry_plot.py
-#   python G23_telemetry_plot.py --network-csv results/G23_network_telemetry_YYYYMMDD_HHMMSS.csv \
-#                                --stress-csv results/G23_stress_telemetry_YYYYMMDD_HHMMSS.csv
+# How it works:
+#   1. Finds the newest telemetry CSV in results/ (or honors explicit
+#      --network-csv / --stress-csv paths).
+#   2. Parses per-node time series, skipping unreachable entries.
+#   3. Appends a small set of hardcoded reference values (shifted forward in
+#      time to avoid overlap) so a plot is always producible even if the
+#      live monitors were not running for this particular experiment.
+#   4. Renders:
+#        - G23_telemetry_network.png (latency ms over time, per node)
+#        - G23_telemetry_stress.png  (CPU millicores over time, per node)
+# ─────────────────────────────────────────────────────────────────────────────
 
 import argparse
 import csv

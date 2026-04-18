@@ -1,17 +1,28 @@
 # G23_sweep_summary.py
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OVERVIEW: Phase 1B Latency Sweep Aggregator
+# ─────────────────────────────────────────────────────────────────────────────
+# Walks all results_<delay>ms/ folders produced by G23_sweep_run.sh and
+# compiles a single master CSV comparing affinity vs anti-affinity at every
+# injected latency level.
 #
-# Scans all "results_*" folders in the current directory and compiles
-# a single master CSV comparing all latency conditions side by side.
+# How it works:
+#   1. Discovers every results_Xms/ directory (plus the default results/
+#      which is treated as 0ms) and de-duplicates by latency key.
+#   2. For each folder, reads all G23_results_affinity_run*.csv and
+#      G23_results_antiaffinity_run*.csv files.
+#   3. Per trial, extracts total_sec (from last cumulative_sec row) and
+#      optionally per-phase timings (forward/backward/optimizer) if the CSV
+#      schema includes them - falls back gracefully to total-only mode when
+#      phase columns are absent.
+#   4. Computes mean/std per (latency, config) and calculates the slowdown
+#      percentage of anti-affinity vs affinity at each latency.
+#   5. Writes G23_sweep_summary.csv + prints a pretty-formatted table.
 #
-# Produces: G23_sweep_summary.csv with per-phase aggregated statistics.
-#
-# Columns:
-#   latency_ms, config, num_trials,
-#   mean_total_sec, std_total_sec,
-#   mean_forward_sec, mean_backward_sec, mean_optimizer_sec,
-#   backward_pct, slowdown_vs_affinity_pct
-#
-# Usage: python G23_sweep_summary.py
+# This summary CSV is the input for both G23_sweep_plot.py and
+# G23_phase_plot.py.
+# ─────────────────────────────────────────────────────────────────────────────
 
 import os
 import re
